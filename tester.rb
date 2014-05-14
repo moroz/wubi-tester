@@ -5,19 +5,24 @@ class Game
 	attr_reader :count, :position
 
 	def initialize
-		@baza = []
-		@points_correct = 0
-		@points_wrong = 0
-		@queue = []
+		@baza = [] # An array of all the questions in the base
+		@points_correct = 0 # The count of correct answers
+		@points_wrong = 0 # Analogically
+		@queue = [] # What you really will answer
 		@to_revise = {}
 		@revising = false
-		@next_base = []
-		@times = []
+		@next_base = [] # For questions you answer wrong, all of them will be logged and revised after you're done with the current base
+		@tte = 0.0 #Total time elapsed
+		@counter = 0 #Counting the questions already answered
 	end
 
 	def load(filename = "baza.txt")
 		source = File.new filename
 		source.each do |line|
+			if line =~ /no shuffling/i
+				@noshuffling = true
+				next
+			end
 			text = line.chomp.split(/\t+/)
 			q = text[0]
 			a = text - [text[0]]
@@ -27,21 +32,19 @@ class Game
 	end
 	
 	def mean_time
-		sum = 0.0
-		for i in @times
-			sum += i
-		end
-		sum/@times.count
+		@tte/@counter
 	end
 
 	def count_time
 		@time_elapsed = Time.now - @starting_time
-		@times += [@time_elapsed]
+		@tte += @time_elapsed # total time elapsed
+		@counter += 1
 	end
 
 	def start
 		#p @baza
-		@queue = @baza.shuffle
+		@queue = @baza
+		@queue.shuffle! unless @noshuffling
 		@position = 0
 		@count = @queue.count
 		puts "Welcome to Wubi trainer. For each character given, please input the corresponding Wubi code and press [Enter]."
@@ -49,7 +52,8 @@ class Game
 	end
 
 	def restart
-		@queue = @next_base.shuffle
+		@queue = @next_base
+		@queue.shuffle! unless @noshuffling
 		@position = 0
 		@next_base = []
 		@to_revise = {}
@@ -68,7 +72,8 @@ class Game
 
 	def goodbye
 		puts score
-		puts "To revise: " + @next_base.join(", ") + "."
+		#puts "To revise: " + @next_base.join(", ") + "."
+		log
 		exit
 	end
 
@@ -117,6 +122,15 @@ class Game
 		@points_correct += 1
 		puts "That's the correct answer!"
 		puts score
+	end
+
+	def log
+		Dir.mkdir "log" unless Dir.exists?("log")
+		logfile = File.new(Time.now.strftime("log/%y%m%d-%H%M%S.txt"), "w")
+		for item in @next_base
+			logfile.puts item[:q] + "\t" + item[:a].join("\t")
+		end
+		logfile.close
 	end
 
 	def wrong(correct_answer)
