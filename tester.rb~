@@ -109,7 +109,6 @@ class Game
 					answer += key
 					print key
 				when "\r", " " then
-					puts
 					return answer
 				when "\x7F" then
 					answer = answer[0..-2]
