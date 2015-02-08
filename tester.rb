@@ -27,10 +27,16 @@ class Game
 		@tte = 0.0 #Total time elapsed
 		@counter = 0 #Counting the questions already answered
 		@round = 1
+		@data_dir = "data"
 	end
 
-	def load(filename = "baza.txt")
-		source = File.new filename, "r:UTF-8"
+	def load(filename)
+		if File.exists? "./#{filename}"
+			path = filename
+		else
+			path = "#{@data_dir}/#{filename}"
+		end
+		source = File.new path, "r:UTF-8"
 		source.each do |line|
 			if line =~ /no shuffling/i
 				@noshuffling = true
@@ -180,7 +186,8 @@ class Game
 		correctness = (@points_correct.to_f/(@points_correct+@points_wrong)*100).round(1)
 		str = "Correct: #{@points_correct}, wrong: #{@points_wrong}. Correctness ratio: " + correctness.to_s + "%.\n"
 		str << "Time elapsed: " + @time_elapsed.round(3).to_s + " s. "
-		str << "Mean time: #{mean_time.round(3)} s."
+		str << "Mean time: #{mean_time.round(3)} s.\n"
+		str << "Questions remaining: #{@queue.count-@position}"
 	end
 
 	def add_question(q, a)
@@ -197,13 +204,19 @@ class Game
 end
 
 game = Game.new
-unless ARGV.empty?
-	for file in ARGV
-		game.load(file)
-	end
+if ARGV.empty?							# if no file given, load all files in the directory "data"
+	datafiles = Dir.glob "data/*-*.txt"
+elsif ARGV[0] =~ /(\d+)/
+	datafiles = (Dir.glob "data/*-*.txt").shuffle
+	number = $1.to_i/100
+	datafiles = datafiles[0..number-1]
 else
-	game.load
+	datafiles = ARGV
 end
+for file in datafiles
+	game.load(file)
+end
+
 game.start
 loop do
 	game.ask
